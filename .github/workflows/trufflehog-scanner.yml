@@ -64,7 +64,8 @@ env:
   REPOSITORY_SCAN_LIMIT: ${{ inputs.repository_scan_limit || '50000' }}
   TRUFFLEHOG_VERSION: "3.93.8"
   # --results=verified,unknown,unverified
-  TRUFFLEHOG_SCAN_FLAGS: "--results=verified --allow-verification-overlap --concurrency=8 --filter-entropy=4.5 --force-skip-binaries"
+  # --results=verified
+  TRUFFLEHOG_SCAN_FLAGS: "--results=verified,unknown,unverified --allow-verification-overlap --concurrency=8 --filter-entropy=4.5 --force-skip-binaries"
   REPORT_MAX_ROWS_PER_REPOSITORY: ${{ inputs.report_max_rows_per_repository || '300' }}
   REPORT_THEME_DEFAULT: "light"
   REPORT_DEBUG: "0"
