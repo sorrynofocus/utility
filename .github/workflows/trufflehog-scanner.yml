@@ -7,16 +7,16 @@ on:
         description: "Scan an organization or one repository"
         type: choice
         required: true
-        default: "org"
+        default: "repository"
         options:
           - org
           - repository
       scan_target:
-        description: "Org name for org scans, or owner/repo for one repository. Defaults to the workflow repository owner."
+        description: "Target to scan. Use an org name when mode is org; use owner/repo when mode is repository."
         required: false
-        default: ""
+        default: "sorrynofocus/utility"
       repository_visibility:
-        description: "Repository visibility to include for org scans"
+        description: "Only used for org scans. Choose all to include public and private repositories."
         type: choice
         required: true
         default: "private"
@@ -63,6 +63,7 @@ env:
   REPOSITORY_VISIBILITY: ${{ inputs.repository_visibility || 'private' }}
   REPOSITORY_SCAN_LIMIT: ${{ inputs.repository_scan_limit || '50000' }}
   TRUFFLEHOG_VERSION: "3.93.8"
+  # --results=verified,unknown,unverified
   TRUFFLEHOG_SCAN_FLAGS: "--results=verified --allow-verification-overlap --concurrency=8 --filter-entropy=4.5 --force-skip-binaries"
   REPORT_MAX_ROWS_PER_REPOSITORY: ${{ inputs.report_max_rows_per_repository || '300' }}
   REPORT_THEME_DEFAULT: "light"
