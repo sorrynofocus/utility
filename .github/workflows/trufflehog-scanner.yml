@@ -1,0 +1,250 @@
+name: TruffleHog Secret Scan
+
+on:
+  workflow_dispatch:
+    inputs:
+      scan_target_type:
+        description: "Scan an organization or one repository"
+        type: choice
+        required: true
+        default: "org"
+        options:
+          - org
+          - repository
+      scan_target:
+        description: "Org name for org scans, or owner/repo for one repository. Defaults to the workflow repository owner."
+        required: false
+        default: ""
+      repository_visibility:
+        description: "Repository visibility to include for org scans"
+        type: choice
+        required: true
+        default: "private"
+        options:
+          - private
+          - public
+          - all
+      repository_scan_limit:
+        description: "Maximum repositories to scan for org mode"
+        required: true
+        default: "50000"
+      report_max_rows_per_repository:
+        description: "Maximum sample finding rows per repository in the report"
+        required: true
+        default: "300"
+      upload_artifact:
+        description: "Upload scan outputs as a private workflow artifact"
+        type: boolean
+        required: true
+        default: true
+      commit_report_to_repo:
+        description: "Commit dated HTML reports to docs/scans"
+        type: boolean
+        required: true
+        default: false
+      publish_pages_report:
+        description: "Generate GitHub Pages-ready report files"
+        type: boolean
+        required: true
+        default: false
+      artifact_retention_days:
+        description: "Days to retain uploaded artifacts"
+        required: true
+        default: "7"
+  schedule:
+    - cron: "30 3 * * *"
+
+permissions:
+  contents: write
+
+env:
+  SCAN_TARGET_TYPE: ${{ inputs.scan_target_type || 'org' }}
+  SCAN_TARGET: ${{ inputs.scan_target || github.repository_owner }}
+  REPOSITORY_VISIBILITY: ${{ inputs.repository_visibility || 'private' }}
+  REPOSITORY_SCAN_LIMIT: ${{ inputs.repository_scan_limit || '50000' }}
+  TRUFFLEHOG_VERSION: "3.93.8"
+  TRUFFLEHOG_SCAN_FLAGS: "--results=verified --allow-verification-overlap --concurrency=8 --filter-entropy=4.5 --force-skip-binaries"
+  REPORT_MAX_ROWS_PER_REPOSITORY: ${{ inputs.report_max_rows_per_repository || '300' }}
+  REPORT_THEME_DEFAULT: "light"
+  REPORT_DEBUG: "0"
+  REPORT_PUBLISH_PAGES: ${{ inputs.commit_report_to_repo || inputs.publish_pages_report || false }}
+  SCAN_GITHUB_TOKEN: ${{ secrets.TRUFFLEHOG_SCAN_TOKEN || secrets.GH_DISPATCH_PAT || github.token }}
+
+jobs:
+  scan:
+    name: Scan repositories
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Verify tools and authentication
+        run: |
+          set -euo pipefail
+          gh --version
+          jq --version
+          node --version
+          gh auth status || true
+          test -f "$GITHUB_WORKSPACE/.github/workflows/scripts/trufflehog/gen-th-report.js"
+        env:
+          GH_TOKEN: ${{ env.SCAN_GITHUB_TOKEN }}
+
+      - name: Build repository target list
+        id: targets
+        run: |
+          set -euo pipefail
+
+          if [ "$SCAN_TARGET_TYPE" = "repository" ]; then
+            if ! printf '%s' "$SCAN_TARGET" | grep -Eq '^[^/[:space:]]+/[^/[:space:]]+$'; then
+              echo "scan_target must be owner/repo when scan_target_type=repository" >&2
+              exit 1
+            fi
+            archived="$(gh repo view "$SCAN_TARGET" --json isArchived -q '.isArchived')"
+            if [ "$archived" = "true" ]; then
+              echo "Repository $SCAN_TARGET is archived; refusing to scan archived targets." >&2
+              exit 1
+            fi
+            printf '%s\n' "$SCAN_TARGET" > repos.txt
+          elif [ "$SCAN_TARGET_TYPE" = "org" ]; then
+            if [ "$REPOSITORY_VISIBILITY" = "all" ]; then
+              gh repo list "$SCAN_TARGET" --limit "$REPOSITORY_SCAN_LIMIT" --json nameWithOwner,isArchived \
+                | jq -r '.[] | select(.isArchived == false) | .nameWithOwner' > repos.txt
+            else
+              gh repo list "$SCAN_TARGET" --limit "$REPOSITORY_SCAN_LIMIT" --visibility "$REPOSITORY_VISIBILITY" --json nameWithOwner,isArchived \
+                | jq -r '.[] | select(.isArchived == false) | .nameWithOwner' > repos.txt
+            fi
+          else
+            echo "Unsupported scan_target_type: $SCAN_TARGET_TYPE" >&2
+            exit 1
+          fi
+
+          artifact_safe_name="$(printf '%s' "$SCAN_TARGET" | sed 's#[^A-Za-z0-9_.-]#-#g')"
+          [ -n "$artifact_safe_name" ] || artifact_safe_name="target"
+          echo "artifact_name=trufflehog-${SCAN_TARGET_TYPE}-${artifact_safe_name}" >> "$GITHUB_OUTPUT"
+
+          echo "Repository count: $(wc -l < repos.txt)"
+          sed -n '1,10p' repos.txt
+        env:
+          GH_TOKEN: ${{ env.SCAN_GITHUB_TOKEN }}
+
+      - name: Install TruffleHog
+        run: |
+          set -euo pipefail
+          mkdir -p "$HOME/.local/bin"
+          curl -sSfL https://raw.githubusercontent.com/trufflesecurity/trufflehog/main/scripts/install.sh \
+            | sh -s -- -b "$HOME/.local/bin" "v${TRUFFLEHOG_VERSION}"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          "$HOME/.local/bin/trufflehog" --version
+
+      - name: Create custom detector config
+        run: |
+          set -euo pipefail
+          cat > config.yaml <<'YAML'
+          detectors:
+            - name: "HashiCorpVaultToken"
+              keywords:
+                - "hvs."
+                - "hvb."
+                - "hvr."
+                - "hvc."
+              regex:
+                token: "\\b(?:hvs|hvb|hvr|hvc)\\.[A-Za-z0-9_-]{20,}\\b"
+              description: "HashiCorp Vault token"
+          YAML
+          sed -n '1,80p' config.yaml
+
+      - name: Scan repositories
+        run: |
+          set -euo pipefail
+          mkdir -p reports
+
+          total=0
+          ok=0
+          err=0
+
+          while IFS= read -r repo_slug; do
+            [ -n "$repo_slug" ] || continue
+            total=$((total + 1))
+            safe_name="${repo_slug//\//__}"
+            tmpfile="$(mktemp)"
+
+            echo "==> ${repo_slug}"
+            if trufflehog github \
+                --no-update \
+                --repo "https://github.com/${repo_slug}" \
+                --token "$SCAN_GITHUB_TOKEN" \
+                $TRUFFLEHOG_SCAN_FLAGS \
+                --config=config.yaml \
+                --json > "$tmpfile"; then
+              mv "$tmpfile" "reports/${safe_name}.ndjson"
+              ok=$((ok + 1))
+            else
+              echo "WARN: scan failed for ${repo_slug} (continuing)" >&2
+              rm -f "$tmpfile"
+              err=$((err + 1))
+            fi
+          done < repos.txt
+
+          echo "Scanned: ${total}; success: ${ok}; failed: ${err}"
+
+          if compgen -G "reports/*.ndjson" > /dev/null; then
+            cat reports/*.ndjson > reports/_merged.ndjson
+            jq -r 'select(.DetectorName) | (.DetectorDescription // .DetectorName)' reports/_merged.ndjson \
+              | sort | uniq -c | sort -nr > reports/_summary_by_detector.txt
+          else
+            echo "No per-repository NDJSON files were produced. Creating empty summaries."
+            : > reports/_merged.ndjson
+            : > reports/_summary_by_detector.txt
+          fi
+        env:
+          GH_TOKEN: ${{ env.SCAN_GITHUB_TOKEN }}
+
+      - name: Build HTML report
+        if: ${{ success() }}
+        run: |
+          set -euo pipefail
+          node .github/workflows/scripts/trufflehog/gen-th-report.js
+        env:
+          GH_TOKEN: ${{ env.SCAN_GITHUB_TOKEN }}
+          SCAN_TARGET_TYPE: ${{ env.SCAN_TARGET_TYPE }}
+          SCAN_TARGET: ${{ env.SCAN_TARGET }}
+          REPOSITORY_VISIBILITY: ${{ env.REPOSITORY_VISIBILITY }}
+          REPORT_MAX_ROWS_PER_REPOSITORY: ${{ env.REPORT_MAX_ROWS_PER_REPOSITORY }}
+          REPORT_THEME_DEFAULT: ${{ env.REPORT_THEME_DEFAULT }}
+          REPORT_DEBUG: ${{ env.REPORT_DEBUG }}
+          REPORT_PUBLISH_PAGES: ${{ env.REPORT_PUBLISH_PAGES }}
+          RUN_ID: ${{ github.run_id }}
+
+      - name: Commit dated reports
+        if: ${{ success() && inputs.commit_report_to_repo }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$GITHUB_WORKSPACE/docs/scans/trufflehog/" "$GITHUB_WORKSPACE/docs/scans/trufflehog.md"
+          if git diff --cached --quiet; then
+            echo "Nothing to commit."
+          else
+            git commit -m "chore: add TruffleHog scan report for $(date -u +%Y-%m-%d)"
+            git push
+          fi
+
+      - name: Upload artifacts
+        if: ${{ success() && (github.event_name != 'workflow_dispatch' || inputs.upload_artifact) }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.targets.outputs.artifact_name }}-${{ github.run_id }}
+          retention-days: ${{ inputs.artifact_retention_days || '7' }}
+          if-no-files-found: ignore
+          path: |
+            repos.txt
+            config.yaml
+            reports/_merged.ndjson
+            reports/_summary_by_detector.txt
+            reports/index.html
+            reports/*.ndjson
