@@ -1,7 +1,6 @@
 reports/
 config.yaml
 repos.txt
-docs/scans/trufflehog/*.html
 
 # Logs
 logs

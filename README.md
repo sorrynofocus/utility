@@ -48,6 +48,7 @@ The workflow is designed to run with minimal committed configuration. Most runti
 | Repository list | Generated runtime file `repos.txt` | Created during the workflow run from the selected scan mode and target. Do not commit this generated file. |
 | Raw scan output | Generated runtime files under `reports/` | Contains merged NDJSON, detector summary, per-repository NDJSON, and `reports/index.html`. Do not commit unless intentionally publishing reports. |
 | Pages output | `docs/scans/trufflehog/` and `docs/scans/trufflehog.md` | Created only when report publishing is enabled. Keep disabled while testing private scans. |
+| Pages home | `docs/index.md` | Optional project Pages landing page. The report generator creates a minimal one only if it does not already exist. |
 
 Fallback manager map format:
 
@@ -84,10 +85,11 @@ Recommended `.gitignore` entries:
 reports/
 config.yaml
 repos.txt
-docs/scans/trufflehog/*.html
 .github/workflows/scripts/trufflehog/fixtures/
 FAKE-TEST/
 ```
+
+Do not ignore `docs/scans/trufflehog/*.html` when using Pages publishing. Those dated HTML files are the actual reports linked from `docs/scans/trufflehog.md`.
 
 
 ### Workflow Inputs
