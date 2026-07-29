@@ -85,7 +85,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Verify tools and authentication
         run: |
@@ -258,11 +258,17 @@ jobs:
             git add "$GITHUB_WORKSPACE/docs/index.md"
           fi
           git add -f "$GITHUB_WORKSPACE/docs/scans/trufflehog/"*.html
+          echo "Pages files staged for commit:"
+          git status --short "$GITHUB_WORKSPACE/docs"
           if git diff --cached --quiet; then
             echo "Nothing to commit."
           else
             git commit -m "chore: add TruffleHog scan report for $(date -u +%Y-%m-%d)"
-            git push
+            if ! git push; then
+              echo "Initial push failed, rebasing onto latest ${GITHUB_REF_NAME} and retrying."
+              git pull --rebase origin "${GITHUB_REF_NAME}"
+              git push
+            fi
           fi
 
       - name: Upload artifacts
