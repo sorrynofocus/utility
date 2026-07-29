@@ -47,8 +47,9 @@ The workflow is designed to run with minimal committed configuration. Most runti
 | Custom detector config | Generated runtime file `config.yaml` | Created during the workflow run. Currently adds the HashiCorp Vault token custom detector. Do not commit this generated file. |
 | Repository list | Generated runtime file `repos.txt` | Created during the workflow run from the selected scan mode and target. Do not commit this generated file. |
 | Raw scan output | Generated runtime files under `reports/` | Contains merged NDJSON, detector summary, per-repository NDJSON, and `reports/index.html`. Do not commit unless intentionally publishing reports. |
-| Pages output | `docs/scans/trufflehog/` and `docs/scans/trufflehog.md` | Created only when report publishing is enabled. Keep disabled while testing private scans. |
-| Pages home | `docs/index.md` | Optional project Pages landing page. The report generator creates a minimal one only if it does not already exist. |
+| Pages report files | `docs/scans/trufflehog/*.html` | Dated HTML reports copied from `reports/index.html` when report publishing is enabled. These are the actual report pages linked from the Pages index. |
+| Pages report index | `docs/scans/trufflehog.md` | Markdown index regenerated newest-to-oldest when report publishing is enabled. This links to the dated HTML reports under `docs/scans/trufflehog/`. |
+| Pages home | `docs/index.md` | Project Pages landing page. The report generator creates a minimal one only if it does not already exist, so custom utility repo documentation is not overwritten. |
 
 Fallback manager map format:
 
@@ -90,6 +91,16 @@ FAKE-TEST/
 ```
 
 Do not ignore `docs/scans/trufflehog/*.html` when using Pages publishing. Those dated HTML files are the actual reports linked from `docs/scans/trufflehog.md`.
+
+GitHub Pages path map when the repository publishes from `/docs`:
+
+| Source file | Published URL |
+| --- | --- |
+| `docs/index.md` | `https://OWNER.github.io/REPOSITORY/` |
+| `docs/scans/trufflehog.md` | `https://OWNER.github.io/REPOSITORY/scans/trufflehog.html` |
+| `docs/scans/trufflehog/trufflehog-scan-YYYY-MM-DD.html` | `https://OWNER.github.io/REPOSITORY/scans/trufflehog/trufflehog-scan-YYYY-MM-DD.html` |
+
+If `docs/scans/trufflehog.md` exists but a dated report link returns `404`, verify that the matching `docs/scans/trufflehog/trufflehog-scan-YYYY-MM-DD.html` file was committed. The Pages deploy log should archive the `scans/` folder, not only `index.html`.
 
 
 ### Workflow Inputs
@@ -194,7 +205,30 @@ _Note_: Typical Github pages cannot be _private_ unless you upgrade Github or en
     publish_pages_report: true
     ```
 
+    A successful publishing run should commit both the report index and the dated HTML report:
+
+    ```text
+    docs/scans/trufflehog.md
+    docs/scans/trufflehog/trufflehog-scan-YYYY-MM-DD.html
+    ```
+
+    The workflow force-adds the dated HTML report because `.gitignore` rules from earlier testing can otherwise prevent Pages from receiving the real report file.
+
     Only enable this when report visibility is acceptable for the repository and account settings.
+
+3. Deployment Name
+
+    The `github-pages` label shown under GitHub `Deployments` is the deployment environment name used by GitHub Pages. For Pages configured as `Deploy from a branch`, GitHub manages that deployment flow and normally shows the environment as `github-pages`.
+
+    To use a custom deployment environment name, switch Pages to a custom GitHub Actions deployment workflow and set the deploy job environment name, for example:
+
+    ```yaml
+    environment:
+      name: utility-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    ```
+
+    For the built-in branch-based Pages deployment, treat `github-pages` as the expected name.
 
 ### Workflow
 
