@@ -27,6 +27,14 @@ TRUFFLEHOG_SCAN_TOKEN
 
 The token must have `read` access to the repositories being scanned. For private org/user-wide scans, use a token with `repository read access` and `organization read access` where applicable.
 
+### Installation
+
+Basically, copying three things and putting them into your workflows:
+
+- `.github/workflows/trufflehog.yml`  - main workflow file
+- `.github/workflows/scripts/trufflehog/*`  - supporting scripts for the workflow
+- `.github/workflows/conf/team-repo-em.json`  - optional fallback manager map for CODEOWNERS
+
 ### Configuration
 
 The workflow is designed to run with minimal committed configuration. Most runtime files are generated during the GitHub Actions run.
