@@ -24,6 +24,15 @@ on:
           - private
           - public
           - all
+      scan_profile:
+        description: "Scan profile: strict is verified only; real includes likely findings; verbose is noisy for fixture testing."
+        type: choice
+        required: true
+        default: "strict"
+        options:
+          - strict
+          - real
+          - verbose
       repository_scan_limit:
         description: "Maximum repositories to scan for org mode"
         required: true
@@ -63,9 +72,7 @@ env:
   REPOSITORY_VISIBILITY: ${{ inputs.repository_visibility || 'private' }}
   REPOSITORY_SCAN_LIMIT: ${{ inputs.repository_scan_limit || '50000' }}
   TRUFFLEHOG_VERSION: "3.93.8"
-  # --results=verified,unknown,unverified
-  # --results=verified
-  TRUFFLEHOG_SCAN_FLAGS: "--results=verified,unknown,unverified --allow-verification-overlap --concurrency=8 --filter-entropy=4.5 --force-skip-binaries"
+  TRUFFLEHOG_SCAN_PROFILE: ${{ inputs.scan_profile || 'strict' }}
   REPORT_MAX_ROWS_PER_REPOSITORY: ${{ inputs.report_max_rows_per_repository || '300' }}
   REPORT_THEME_DEFAULT: "light"
   REPORT_DEBUG: "0"
@@ -133,6 +140,28 @@ jobs:
           sed -n '1,10p' repos.txt
         env:
           GH_TOKEN: ${{ env.SCAN_GITHUB_TOKEN }}
+
+      - name: Select scan profile
+        run: |
+          set -euo pipefail
+          case "$TRUFFLEHOG_SCAN_PROFILE" in
+            strict)
+              flags="--results=verified --allow-verification-overlap --concurrency=8 --filter-entropy=4.5 --force-skip-binaries"
+              ;;
+            real)
+              flags="--results=verified,unknown --allow-verification-overlap --concurrency=8 --filter-entropy=4.0 --force-skip-binaries"
+              ;;
+            verbose)
+              flags="--results=verified,unknown,unverified --allow-verification-overlap --concurrency=8 --filter-entropy=3.0 --force-skip-binaries"
+              ;;
+            *)
+              echo "Unsupported scan_profile: $TRUFFLEHOG_SCAN_PROFILE" >&2
+              exit 1
+              ;;
+          esac
+          echo "TRUFFLEHOG_SCAN_FLAGS=$flags" >> "$GITHUB_ENV"
+          echo "Selected scan profile: $TRUFFLEHOG_SCAN_PROFILE"
+          echo "Selected scan flags: $flags"
 
       - name: Install TruffleHog
         run: |
@@ -206,7 +235,7 @@ jobs:
         env:
           GH_TOKEN: ${{ env.SCAN_GITHUB_TOKEN }}
 
-      - name: Build HTML report
+      - name: Build HTML TruffleHog report
         if: ${{ success() }}
         run: |
           set -euo pipefail
@@ -220,6 +249,7 @@ jobs:
           REPORT_THEME_DEFAULT: ${{ env.REPORT_THEME_DEFAULT }}
           REPORT_DEBUG: ${{ env.REPORT_DEBUG }}
           REPORT_PUBLISH_PAGES: ${{ env.REPORT_PUBLISH_PAGES }}
+          TRUFFLEHOG_SCAN_PROFILE: ${{ env.TRUFFLEHOG_SCAN_PROFILE }}
           RUN_ID: ${{ github.run_id }}
 
       - name: Commit dated reports

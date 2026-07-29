@@ -1,7 +1,9 @@
 'use strict';
 
+
 const fs = require('fs');
 
+// Report model utilities for TruffleHog HTML report generation.
 const FALLBACK_ELIGIBLE_STATES = new Set([
   'codeowners-unavailable',
   'no-codeowners',
@@ -9,6 +11,8 @@ const FALLBACK_ELIGIBLE_STATES = new Set([
   'unresolved-repository',
 ]);
 
+// Defines constants and helper functions for ownership resolution and report model 
+// aggregation.
 const OWNERSHIP_LABELS = {
   'team-owned': 'CODEOWNERS team',
   'fallback-map': 'Fallback map',
@@ -19,6 +23,8 @@ const OWNERSHIP_LABELS = {
   'unresolved-repository': 'Unresolved repository',
 };
 
+// Loads the optional repo-to-team/manager fallback map from JSON.
+// Used by gen-th-report.js before buildReportModel(); resolveOwnership() reads the returned Map.
 function loadManagerMap(filePath) {
   const map = new Map();
   if (!filePath || !fs.existsSync(filePath)) return map;
@@ -39,11 +45,15 @@ function loadManagerMap(filePath) {
   return map;
 }
 
+// Converts a count Map into a descending sorted array, optionally limited.
+// Used by buildReportModel() for top detectors and top repositories.
 function mapToSortedArray(map, limit) {
   const rows = [...map.entries()].sort((a, b) => b[1] - a[1]);
   return Number.isFinite(limit) ? rows.slice(0, limit) : rows;
 }
 
+// Converts a timestamp into whole days elapsed for display.
+// Used by buildReportModel() when copying sample finding rows into repository buckets.
 function daysAgo(value) {
   if (!value) return 'N/A';
   const ms = Date.parse(value);
@@ -53,10 +63,14 @@ function daysAgo(value) {
   return String(Math.floor(diffMs / 86400000));
 }
 
+// Finds fallback ownership metadata for a repository slug.
+// Used by resolveOwnership(); reads the Map returned by loadManagerMap().
 function getFallback(managerMap, repoSlug) {
   return managerMap.get(String(repoSlug || '').toLowerCase()) || null;
 }
 
+// Chooses the ownership grouping for a normalized finding.
+// Used by buildReportModel(); combines CODEOWNERS output with the optional fallback manager map.
 function resolveOwnership(finding, managerMap) {
   const codeowners = finding.codeowners || { state: 'codeowners-unavailable', teams: [], users: [] };
   const fallback = getFallback(managerMap, finding.repoSlug);
@@ -115,6 +129,8 @@ function resolveOwnership(finding, managerMap) {
   };
 }
 
+// Creates or retrieves an ownership group aggregate.
+// Used by buildReportModel() before repository-level aggregation.
 function ensureGroup(groups, ownership) {
   if (!groups.has(ownership.groupKey)) {
     groups.set(ownership.groupKey, {
@@ -129,6 +145,8 @@ function ensureGroup(groups, ownership) {
   return groups.get(ownership.groupKey);
 }
 
+// Creates or retrieves a repository aggregate within an ownership group.
+// Used by buildReportModel() after ensureGroup() chooses the parent group.
 function ensureRepository(group, finding, ownership) {
   if (!group.repositories.has(finding.repoSlug)) {
     group.repositories.set(finding.repoSlug, {
@@ -142,10 +160,14 @@ function ensureRepository(group, finding, ownership) {
   return group.repositories.get(finding.repoSlug);
 }
 
+// Increments a Map-backed counter.
+// Used by buildReportModel() for detector, repository, group, and per-repository counts.
 function addCount(map, key, amount = 1) {
   map.set(key, (map.get(key) || 0) + amount);
 }
 
+// Builds the complete data model rendered by html-report.js.
+// Used by gen-th-report.js; calls resolveOwnership(), ensureGroup(), ensureRepository(), addCount(), and daysAgo().
 function buildReportModel(findings, options = {}) {
   const managerMap = options.managerMap || new Map();
   const maxRowsPerRepository = Number.isFinite(options.maxRowsPerRepository) ? options.maxRowsPerRepository : 300;

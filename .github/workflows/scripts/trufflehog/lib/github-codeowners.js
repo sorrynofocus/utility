@@ -4,10 +4,14 @@ const { execFileSync } = require('child_process');
 
 const CODEOWNERS_CANDIDATES = ['CODEOWNERS', '.github/CODEOWNERS', 'docs/CODEOWNERS'];
 
+// Runs the GitHub CLI and returns trimmed stdout.
+// Used by resolveDefaultBranch() and fetchCodeownersFiles() for GitHub API access.
 function shellOut(args) {
   return execFileSync('gh', args, { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
 }
 
+// Converts a CODEOWNERS glob pattern into a JavaScript regular expression.
+// Used by parseCodeowners() so matchOwnersForPath() can test repository-relative paths.
 function globToRegExp(glob) {
   const original = String(glob || '').trim();
   if (!original || original === '*') return /^.*$/;
@@ -23,6 +27,8 @@ function globToRegExp(glob) {
   return new RegExp(`(^|/)${pattern}$`);
 }
 
+// Parses CODEOWNERS text into ordered pattern/owner entries.
+// Used by buildResolver(); calls globToRegExp() for each parsed ownership rule.
 function parseCodeowners(text) {
   const entries = [];
   for (const rawLine of String(text || '').replace(/^\uFEFF/, '').split(/\r?\n/)) {
@@ -39,13 +45,21 @@ function parseCodeowners(text) {
   return entries;
 }
 
+// Filters CODEOWNERS owners down to GitHub team handles such as @owner/team.
+// Used by createCodeownersResolver() after matchOwnersForPath() returns raw owners.
 function teamsFromOwners(owners) {
   return [...new Set((owners || []).filter((owner) => typeof owner === 'string' && /^@[^/\s]+\/[^/\s]+$/.test(owner)))];
 }
 
+// Filters CODEOWNERS owners down to individual GitHub user handles such as @octocat.
+// Used by createCodeownersResolver() to distinguish user-owned from team-owned paths.
 function usersFromOwners(owners) {
   return [...new Set((owners || []).filter((owner) => typeof owner === 'string' && /^@[^/\s]+$/.test(owner)))];
 }
+
+
+// Looks up the default branch for a repository through gh repo view.
+// Used by buildResolver() before fetching CODEOWNERS from branch-specific contents URLs.
 
 function resolveDefaultBranch(owner, repo, debug) {
   try {
@@ -56,6 +70,8 @@ function resolveDefaultBranch(owner, repo, debug) {
   }
 }
 
+// Looks up the default branch for a repository through gh repo view.
+// Used by buildResolver() before fetching CODEOWNERS from branch-specific contents URLs.
 function fetchCodeownersFiles(owner, repo, refName, debug) {
   const files = [];
   for (const candidate of CODEOWNERS_CANDIDATES) {
@@ -72,6 +88,9 @@ function fetchCodeownersFiles(owner, repo, refName, debug) {
   return files;
 }
 
+
+// Builds a cached resolver object for one repository's CODEOWNERS state.
+// Used by createCodeownersResolver(); calls resolveDefaultBranch(), fetchCodeownersFiles(), and parseCodeowners().
 function buildResolver(owner, repo, debug) {
   const refName = resolveDefaultBranch(owner, repo, debug);
   const files = fetchCodeownersFiles(owner, repo, refName, debug);
@@ -92,6 +111,8 @@ function buildResolver(owner, repo, debug) {
   };
 }
 
+// Applies CODEOWNERS precedence and returns the owners for a specific file path.
+// Used by createCodeownersResolver(); consumes resolver entries built by buildResolver().
 function matchOwnersForPath(resolver, repoRelativePath) {
   const normalizedPath = String(repoRelativePath || '').replace(/\\/g, '/').replace(/^\//, '');
   if (!resolver || !resolver.entries.length || !normalizedPath) return [];
@@ -103,6 +124,8 @@ function matchOwnersForPath(resolver, repoRelativePath) {
   return owners;
 }
 
+// Creates the per-finding CODEOWNERS lookup function used during report generation.
+// Used by gen-th-report.js; calls buildResolver(), matchOwnersForPath(), teamsFromOwners(), and usersFromOwners().
 function createCodeownersResolver(options = {}) {
   const enabled = Boolean(options.enabled);
   const debug = typeof options.debug === 'function' ? options.debug : () => {};

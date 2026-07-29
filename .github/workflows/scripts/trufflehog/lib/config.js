@@ -3,21 +3,31 @@
 const fs = require('fs');
 const path = require('path');
 
+// Converts environment-style text values into booleans.
+// Used by loadConfig() for feature flags such as REPORT_DEBUG and REPORT_PUBLISH_PAGES.
 function boolFromEnv(value, defaultValue = false) {
   if (value === undefined || value === null || value === '') return defaultValue;
   return ['1', 'true', 'yes', 'on'].includes(String(value).trim().toLowerCase());
 }
 
+// Converts an environment value into a non-negative number with a safe fallback.
+// Used by loadConfig() for numeric report limits such as REPORT_MAX_ROWS_PER_REPOSITORY.
 function numberFromEnv(value, defaultValue) {
   const parsed = Number(value);
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : defaultValue;
 }
 
+/**
+ * Resolves a path-like config value relative to the GitHub workspace when needed.
+ * Used by loadConfig() so the workflow can move between local folders and repositories.
+ */
 function resolveWorkspacePath(workspace, value) {
   if (!value) return '';
   return path.isAbsolute(value) ? value : path.join(workspace, value);
 }
 
+// Resolves a path-like config value relative to the GitHub workspace when needed.
+// Used by loadConfig() so the workflow can move between local folders and repositories.
 function loadConfig(env = process.env) {
   const workspace = env.GITHUB_WORKSPACE || process.cwd();
   const reportsDir = resolveWorkspacePath(workspace, env.REPORT_OUTPUT_DIR || 'reports');
@@ -35,6 +45,8 @@ function loadConfig(env = process.env) {
     scanTargetType: env.SCAN_TARGET_TYPE || 'org',
     scanTarget: env.SCAN_TARGET || 'unknown-target',
     repositoryVisibility: env.REPOSITORY_VISIBILITY || 'private',
+    scanProfile: env.TRUFFLEHOG_SCAN_PROFILE || 'strict',
+    scanFlags: env.TRUFFLEHOG_SCAN_FLAGS || '',
     runId: env.RUN_ID || env.GITHUB_RUN_ID || '',
     maxRowsPerRepository: numberFromEnv(env.REPORT_MAX_ROWS_PER_REPOSITORY, 300),
     defaultTheme: env.REPORT_THEME_DEFAULT || 'light',

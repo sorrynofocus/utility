@@ -2,6 +2,8 @@
 
 const { themeCss, themes } = require('./themes');
 
+// Escapes text for safe insertion into HTML content and attributes.
+// Used by every render helper in this module before placing dynamic report data in markup.
 function esc(value) {
   return String(value ?? '')
     .replace(/&/g, '&amp;')
@@ -11,25 +13,36 @@ function esc(value) {
     .replace(/'/g, '&#39;');
 }
 
+
+// Formats numeric values with US thousands separators.
+// Used by metric, ranking, group, repository, and finding render helpers.
 function num(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed.toLocaleString('en-US') : String(value ?? '');
 }
 
+// Formats a part/whole ratio as a one-decimal percentage string.
+// Used by renderHtmlReport() for verified rate and repository hit rate metrics.
 function percent(part, whole) {
   if (!whole) return '0.0%';
   return `${((part / whole) * 100).toFixed(1)}%`;
 }
 
+// Converts a count Map into a descending array for display.
+// Used by renderDetectorChips() to order detector chips within groups and repositories.
 function mapEntries(map) {
   if (!(map instanceof Map)) return [];
   return [...map.entries()].sort((a, b) => b[1] - a[1]);
 }
 
+// Renders one summary metric card.
+// Used by renderHtmlReport() for finding, verification, repository, and parser metrics.
 function renderMetric(label, value, note) {
   return `<section class="metric"><div class="metric-value">${esc(value)}</div><div class="metric-label">${esc(label)}</div>${note ? `<div class="metric-note">${esc(note)}</div>` : ''}</section>`;
 }
 
+// Renders a top-N horizontal ranking panel.
+// Used by renderHtmlReport() for top detectors and top repositories.
 function renderRankPanel(title, rows) {
   if (!rows.length) {
     return `<section class="panel"><div class="panel-head"><h2>${esc(title)}</h2></div><p class="muted">No data available.</p></section>`;
@@ -42,12 +55,17 @@ function renderRankPanel(title, rows) {
   return `<section class="panel"><div class="panel-head"><h2>${esc(title)}</h2><span class="muted small">Top ${rows.length}</span></div><ol class="rank-list">${items}</ol></section>`;
 }
 
+
+//  Renders detector-count chips from a Map-backed counter.
+//  Used by renderGroup() and renderRepository() to summarize detector mix.
 function renderDetectorChips(map) {
   const entries = mapEntries(map);
   if (!entries.length) return '<span class="muted">No detectors</span>';
   return entries.map(([name, count]) => `<span class="chip" title="${esc(name)}">${esc(name)} <b>${num(count)}</b></span>`).join('');
 }
 
+// Builds a readable ownership signal summary for one repository.
+// Used by renderRepository(); consumes ownership objects produced by report-model.js.
 function renderOwners(ownership) {
   const parts = [];
   if (ownership.teams && ownership.teams.length) parts.push(`Team: ${ownership.teams.join(', ')}`);
@@ -57,6 +75,8 @@ function renderOwners(ownership) {
   return parts.length ? parts.join(' | ') : ownership.label;
 }
 
+// Renders one sample finding row inside a repository section.
+// Used by renderRepository(); expects rows prepared by buildReportModel().
 function renderFindingRow(finding) {
   return `<li class="finding-row">
     <div><span>Detector</span><b>${esc(finding.detector)}</b></div>
@@ -69,13 +89,15 @@ function renderFindingRow(finding) {
   </li>`;
 }
 
+// Renders one repository details block including ownership, detector chips, and sample rows.
+// Used by renderGroup(); calls renderOwners(), renderDetectorChips(), and renderFindingRow().
 function renderRepository(repository, maxRowsPerRepository) {
   const rows = repository.rows.map(renderFindingRow).join('');
   const ownershipText = renderOwners(repository.ownership);
   return `<details class="repo-block">
     <summary><b>${esc(repository.slug)}</b><span>${num(repository.count)} findings</span></summary>
     <div class="repo-body">
-      <div class="meta-line"><b>Owner signal:</b> ${esc(ownershipText)}</div>
+      <div class="meta-line"><b>Owner:</b> ${esc(ownershipText)}</div>
       <div class="subhead">Detectors</div>
       <div class="chips">${renderDetectorChips(repository.byDetector)}</div>
       <div class="subhead">Sample findings</div>
@@ -84,6 +106,10 @@ function renderRepository(repository, maxRowsPerRepository) {
   </details>`;
 }
 
+//
+// Renders one ownership group and all repositories inside it.
+// Used by renderHtmlReport(); calls renderDetectorChips() and renderRepository().
+//
 function renderGroup(group, maxRowsPerRepository) {
   const repositories = [...group.repositories.values()].sort((a, b) => b.count - a.count);
   const repoLabel = repositories.length === 1 ? 'repository' : 'repositories';
@@ -97,6 +123,8 @@ function renderGroup(group, maxRowsPerRepository) {
   </details>`;
 }
 
+// Renders the select options for built-in report themes.
+// Used by renderHtmlReport(); reads theme labels from themes.js.
 function renderThemeOptions(defaultTheme) {
   return Object.entries(themes).map(([id, theme]) => {
     const selected = id === defaultTheme ? ' selected' : '';
@@ -104,6 +132,8 @@ function renderThemeOptions(defaultTheme) {
   }).join('');
 }
 
+// Renders the full self-contained HTML report document.
+// Used by gen-th-report.js; calls every render helper in this module plus themeCss() from themes.js.
 function renderHtmlReport(model, config) {
   const summary = model.summary;
   const generatedAt = config.generatedAt.toISOString().replace('T', ' ').replace('Z', ' UTC');
@@ -152,12 +182,15 @@ function renderHtmlReport(model, config) {
           <span>Target: <b>${esc(config.scanTarget)}</b></span>
           <span>Mode: <b>${esc(config.scanTargetType)}</b></span>
           <span>Visibility: <b>${esc(config.repositoryVisibility)}</b></span>
+          <span>Profile: <b>${esc(config.scanProfile)}</b></span>
           <span>Run: <b>${esc(config.runId || 'local')}</b></span>
           <span>Generated: <b>${esc(generatedAt)}</b></span>
         </div>
       </div>
       <div class="toolbar"><label for="themeSelect">Theme</label><select id="themeSelect">${renderThemeOptions(defaultTheme)}</select></div>
     </header>
+
+    ${config.scanFlags ? `<section class="panel"><div class="panel-head"><h2>Scan Settings</h2></div><p><code>${esc(config.scanFlags)}</code></p></section>` : ''}
 
     <section class="metric-grid">
       ${renderMetric('Total findings', num(summary.totalFindings), `${num(summary.uniqueDetectors)} detector types`)}

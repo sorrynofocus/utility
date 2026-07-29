@@ -1,5 +1,7 @@
 'use strict';
 
+// Defines the built-in themes for the HTML report, including light, dark, and 
+// high-contrast modes.
 const themes = {
   light: {
     name: 'Light',
@@ -45,6 +47,8 @@ const themes = {
   },
 };
 
+// Converts the built-in theme token map into CSS custom-property blocks.
+// Used by html-report.js inside renderHtmlReport() so the report stays self-contained.
 function themeCss() {
   return Object.entries(themes).map(([id, theme]) => {
     const selector = id === 'light' ? ':root' : `:root[data-theme="${id}"]`;

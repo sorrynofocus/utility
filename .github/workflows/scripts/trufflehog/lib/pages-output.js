@@ -3,6 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 
+// Writes optional GitHub Pages-ready report files and a Markdown index.
+// Used by gen-th-report.js after reports/index.html is rendered; copies HTML only when REPORT_PUBLISH_PAGES is enabled.
 function writePagesOutputs(config) {
   if (!config.publishPages) {
     console.log('[pages] Skipping docs/scans output because REPORT_PUBLISH_PAGES is false.');
