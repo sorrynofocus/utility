@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TruffleHog Secret Scan Report</title>
+  <style>
+    :root{--bg:#f7f8fb;--panel:#ffffff;--panel-alt:#f1f5f9;--text:#172033;--muted:#5b667a;--border:#d7dde8;--accent:#2563eb;--accent-alt:#0f766e;--warning:#a16207;--danger:#b91c1c;--good:#15803d;}
+:root[data-theme="dark"]{--bg:#10131a;--panel:#171b24;--panel-alt:#202636;--text:#eef2f8;--muted:#a8b1c2;--border:#30384a;--accent:#60a5fa;--accent-alt:#2dd4bf;--warning:#fbbf24;--danger:#f87171;--good:#4ade80;}
+:root[data-theme="high-contrast"]{--bg:#000000;--panel:#050505;--panel-alt:#111111;--text:#ffffff;--muted:#f5f5f5;--border:#ffffff;--accent:#00ffff;--accent-alt:#ffff00;--warning:#ffff00;--danger:#ff4d4d;--good:#66ff66;}
+:root[data-theme="seegson"]{--bg:#e3e7e6;--panel:#f2f4f4;--panel-alt:#d8dddc;--text:#1e2a28;--muted:#4a7a72;--border:#8aa9a3;--accent:#4a7a72;--accent-alt:#6a9a92;--warning:#8a6d2f;--danger:#9a4f4a;--good:#4a7a72;}
+:root[data-theme="earl-kelly"]{--bg:#f9f3e8;--panel:#fcf6ec;--panel-alt:#f4e8d6;--text:#2e241c;--muted:#6a503c;--border:#bc7a3f;--accent:#6b4a34;--accent-alt:#8c5a2b;--warning:#9a651f;--danger:#8c3f2b;--good:#5f6b34;}
+    *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:14px/1.5 ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}a{color:var(--accent)}main{max-width:1240px;margin:0 auto;padding:28px 18px 44px}header{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;margin-bottom:18px}.title h1{margin:0 0 6px;font-size:28px;letter-spacing:0}.meta{color:var(--muted);display:flex;flex-wrap:wrap;gap:8px 14px}.toolbar{display:flex;gap:8px;align-items:center}.toolbar label{color:var(--muted);font-size:12px}.toolbar select{border:1px solid var(--border);background:var(--panel);color:var(--text);border-radius:6px;padding:6px 8px}.metric-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin:18px 0}.metric,.panel,.owner-group{background:var(--panel);border:1px solid var(--border);border-radius:8px}.metric{padding:16px}.metric-value{font-size:28px;font-weight:800}.metric-label{font-weight:700}.metric-note,.muted{color:var(--muted)}.small{font-size:12px}.panel-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin:12px 0 18px}.panel{padding:16px}.panel-head{display:flex;justify-content:space-between;gap:12px;align-items:center}.panel h2{font-size:16px;margin:0}.rank-list{list-style:none;margin:12px 0 0;padding:0}.rank-row{padding:10px 0;border-top:1px solid var(--border)}.rank-meta{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:8px;align-items:center}.rank-index{color:var(--muted);font-weight:700}.rank-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.rank-track{height:8px;background:var(--panel-alt);border-radius:999px;overflow:hidden;margin-top:7px}.rank-track span{display:block;height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-alt));border-radius:999px}.owner-group{margin:12px 0;overflow:hidden}.owner-group>summary,.repo-block>summary{cursor:pointer;display:flex;justify-content:space-between;gap:12px;align-items:center;padding:12px 14px;background:var(--panel-alt)}.group-body{padding:14px}.subhead{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800;margin:12px 0 8px}.chips{display:flex;flex-wrap:wrap;gap:6px}.chip{border:1px solid var(--border);border-radius:999px;padding:4px 8px;background:var(--panel-alt)}.repo-block{border:1px solid var(--border);border-radius:8px;margin:12px 0;overflow:hidden}.repo-body{padding:12px}.meta-line{padding:8px 10px;background:var(--panel-alt);border-radius:6px}.finding-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}.finding-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:10px;border:1px solid var(--border);border-radius:8px;background:var(--panel-alt)}.finding-row div{min-width:0}.finding-row span{display:block;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em}.finding-row b,.finding-row code{display:block;overflow-wrap:anywhere}.finding-row .wide{grid-column:1/-1}code{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",monospace}@media(max-width:760px){header{display:block}.toolbar{margin-top:12px}.finding-row{grid-template-columns:1fr}.owner-group>summary,.repo-block>summary{display:block}.owner-group>summary span,.repo-block>summary span{display:block;color:var(--muted);margin-top:4px}}
+  </style>
+  <script>
+    (function(){
+      var key = 'trufflehog-report-theme';
+      var allowed = ["light","dark","high-contrast","seegson","earl-kelly"];
+      function applyTheme(theme){
+        if (allowed.indexOf(theme) === -1) theme = "light";
+        document.documentElement.setAttribute('data-theme', theme);
+        try { localStorage.setItem(key, theme); } catch (_) {}
+        var select = document.getElementById('themeSelect');
+        if (select) select.value = theme;
+      }
+      var saved = '';
+      try { saved = localStorage.getItem(key) || ''; } catch (_) {}
+      applyTheme(saved || "light");
+      window.addEventListener('DOMContentLoaded', function(){
+        var select = document.getElementById('themeSelect');
+        if (!select) return;
+        select.addEventListener('change', function(){ applyTheme(select.value); });
+      });
+    })();
+  </script>
+</head>
+<body>
+  <main>
+    <header>
+      <div class="title">
+        <h1>TruffleHog Secret Scan Report</h1>
+        <div class="meta">
+          <span>Target: <b>sorrynofocus</b></span>
+          <span>Mode: <b>org</b></span>
+          <span>Visibility: <b>all</b></span>
+          <span>Profile: <b>verbose</b></span>
+          <span>Run: <b>30417119257</b></span>
+          <span>Generated: <b>2026-07-29 02:34:35.397 UTC</b></span>
+        </div>
+      </div>
+      <div class="toolbar"><label for="themeSelect">Theme</label><select id="themeSelect"><option value="light" selected>Light</option><option value="dark">Dark</option><option value="high-contrast">High contrast</option><option value="seegson">Seegson</option><option value="earl-kelly">Earl Kelly</option></select></div>
+    </header>
+
+    <section class="panel"><div class="panel-head"><h2>Scan Settings</h2></div><p><code>--results=verified,unknown,unverified --allow-verification-overlap --concurrency=8 --filter-entropy=3.0 --force-skip-binaries</code></p></section>
+
+    <section class="metric-grid">
+      <section class="metric"><div class="metric-value">19</div><div class="metric-label">Total findings</div><div class="metric-note">5 detector types</div></section>
+      <section class="metric"><div class="metric-value">0.0%</div><div class="metric-label">Verified rate</div><div class="metric-note">0 verified findings</div></section>
+      <section class="metric"><div class="metric-value">2</div><div class="metric-label">Repositories with findings</div><div class="metric-note">7.4% of 27 scanned</div></section>
+      <section class="metric"><div class="metric-value">0</div><div class="metric-label">Invalid NDJSON lines</div><div class="metric-note">Ignored while building report</div></section>
+    </section>
+
+    <section class="panel-grid">
+      <section class="panel"><div class="panel-head"><h2>Top detectors</h2><span class="muted small">Top 5</span></div><ol class="rank-list"><li class="rank-row"><div class="rank-meta"><span class="rank-index">1</span><span class="rank-name" title="URI">URI</span><b>7</b></div><div class="rank-track"><span style="width:100%"></span></div></li><li class="rank-row"><div class="rank-meta"><span class="rank-index">2</span><span class="rank-name" title="HashiCorp Vault token">HashiCorp Vault token</span><b>7</b></div><div class="rank-track"><span style="width:100%"></span></div></li><li class="rank-row"><div class="rank-meta"><span class="rank-index">3</span><span class="rank-name" title="AWS">AWS</span><b>2</b></div><div class="rank-track"><span style="width:29%"></span></div></li><li class="rank-row"><div class="rank-meta"><span class="rank-index">4</span><span class="rank-name" title="SlackWebhook">SlackWebhook</span><b>2</b></div><div class="rank-track"><span style="width:29%"></span></div></li><li class="rank-row"><div class="rank-meta"><span class="rank-index">5</span><span class="rank-name" title="Github">Github</span><b>1</b></div><div class="rank-track"><span style="width:14%"></span></div></li></ol></section>
+      <section class="panel"><div class="panel-head"><h2>Top repositories</h2><span class="muted small">Top 2</span></div><ol class="rank-list"><li class="rank-row"><div class="rank-meta"><span class="rank-index">1</span><span class="rank-name" title="sorrynofocus/fake-test">sorrynofocus/fake-test</span><b>12</b></div><div class="rank-track"><span style="width:100%"></span></div></li><li class="rank-row"><div class="rank-meta"><span class="rank-index">2</span><span class="rank-name" title="sorrynofocus/Jotter">sorrynofocus/Jotter</span><b>7</b></div><div class="rank-track"><span style="width:58%"></span></div></li></ol></section>
+    </section>
+
+    <section>
+      <h2>Ownership Details</h2>
+      <details class="owner-group" open>
+    <summary><b>@sorrynofocus/platform-testing</b><span>7 findings across 1 repository</span></summary>
+    <div class="group-body">
+      <div class="subhead">Detectors</div>
+      <div class="chips"><span class="chip" title="HashiCorp Vault token">HashiCorp Vault token <b>4</b></span><span class="chip" title="SlackWebhook">SlackWebhook <b>2</b></span><span class="chip" title="AWS">AWS <b>1</b></span></div>
+      <details class="repo-block">
+    <summary><b>sorrynofocus/fake-test</b><span>7 findings</span></summary>
+    <div class="repo-body">
+      <div class="meta-line"><b>Owner:</b> Team: @sorrynofocus/platform-testing</div>
+      <div class="subhead">Detectors</div>
+      <div class="chips"><span class="chip" title="HashiCorp Vault token">HashiCorp Vault token <b>4</b></span><span class="chip" title="SlackWebhook">SlackWebhook <b>2</b></span><span class="chip" title="AWS">AWS <b>1</b></span></div>
+      <div class="subhead">Sample findings</div>
+      <ul class="finding-list"><li class="finding-row">
+    <div><span>Detector</span><b>HashiCorp Vault token</b></div>
+    <div><span>Verified</span><b>No</b></div>
+    <div><span>Path</span><b>app.env</b></div>
+    <div><span>Blame</span><b>SorryNoFocus &lt;thechriswinters@gmail.com&gt;</b></div>
+    <div><span>Age</span><b>0 days</b></div>
+    <div><span>Link</span><b><a href="https://github.com/sorrynofocus/fake-test/blob/edc399cd1373f07eafd81ee63785a361628c0b3d/app.env#L5" target="_blank" rel="noopener noreferrer">Open</a></b></div>
+    <div class="wide"><span>Redacted</span><code>hvr.FAKE...DEF</code></div>
+  </li><li class="finding-row">
+    <div><span>Detector</span><b>HashiCorp Vault token</b></div>
+    <div><span>Verified</span><b>No</b></div>
+    <div><span>Path</span><b>app.env</b></div>
+    <div><span>Blame</span><b>SorryNoFocus &lt;thechriswinters@gmail.com&gt;</b></div>
+    <div><span>Age</span><b>0 days</b></div>
+    <div><span>Link</span><b><a href="https://github.com/sorrynofocus/fake-test/blob/edc399cd1373f07eafd81ee63785a361628c0b3d/app.env#L6" target="_blank" rel="noopener noreferrer">Open</a></b></div>
+    <div class="wide"><span>Redacted</span><code>hvc.FAKE...DEF</code></div>
+  </li><li class="finding-row">
+    <div><span>Detector</span><b>HashiCorp Vault token</b></div>
+    <div><span>Verified</span><b>No</b></div>
+    <div><span>Path</span><b>app.env</b></div>
+    <div><span>Blame</span><b>SorryNoFocus &lt;thechriswinters@gmail.com&gt;</b></div>
+    <div><span>Age</span><b>0 days</b></div>
+    <div><span>Link</span><b><a href="https://github.com/sorrynofocus/fake-test/blob/edc399cd1373f07eafd81ee63785a361628c0b3d/app.env#L3" target="_blank" rel="noopener noreferrer">Open</a></b></div>
+    <div class="wide"><span>Redacted</span><code>hvs.FAKE...DEF</code></div>
+  </li><li class="finding-row">
+    <div><span>Detector</span><b>HashiCorp Vault token</b></div>
+    <div><span>Verified</span><b>No</b></div>
+    <div><span>Path</span><b>app.env</b></div>
+    <div><span>Blame</span><b>SorryNoFocus &lt;thechriswinters@gmail.com&gt;</b></div>
+    <div><span>Age</span><b>0 days</b></div>
+    <div><span>Link</span><b><a href="https://github.com/sorrynofocus/fake-test/blob/edc399cd1373f07eafd81ee63785a361628c0b3d/app.env#L4" target="_blank" rel="noopener noreferrer">Open</a></b></div>
+    <div class="wide"><span>Redacted</span><code>hvb.FAKE...DEF</code></div>
+  </li><li class="finding-row">
+    <div><span>Detector</span><b>AWS</b></div>
+    <div><span>Verified</span><b>No</b></div>
+    <div><span>Path</span><b>app.env</b></div>
+    <div><span>Blame</span><b>SorryNoFocus &lt;thechriswinters@gmail.com&gt;</b></div>
+    <div><span>Age</span><b>0 days</b></div>
+    <div><span>Link</span><b><a href="https://github.com/sorrynofocus/fake-test/blob/9588decc69c294108709c660e4f3971aef2945af/app.env#L8" target="_blank" rel="noopener noreferrer">Open</a></b></div>
+    <div class="wide"><span>Redacted</span><code>AKIA6RVFFB77HU5S2RD4</code></div>
+  </li><li class="finding-row">
+    <div><span>Detector</span><b>SlackWebhook</b></div>
+    <div><span>Verified</span><b>No</b></div>
+    <div><span>Path</span><b>app.env</b></div>
+    <div><span>Blame</span><b>SorryNoFocus &lt;thechriswinters@gmail.com&gt;</b></div>
+    <div><span>Age</span><b>0 days</b></div>
+    <div><span>Link</span><b><a href="https://github.com/sorrynofocus/fake-test/blob/edc399cd1373f07eafd81ee63785a361628c0b3d/app.env#L11" target="_blank" rel="noopener noreferrer">Open</a></b></div>
+    <div class="wide"><span>Redacted</span><code>https://hooks.slack.com/services/T00000000/B00000000/XXXX...XXX</code></div>
+  </li><li class="finding-row">
+    <div><span>Detector</span><b>SlackWebhook</b></div>
+    <div><span>Verified</span><b>No</b></div>
+    <div><span>Path</span><b>app.env</b></div>
+    <div><span>Blame</span><b>SorryNoFocus &lt;thechriswinters@gmail.com&gt;</b></div>
+    <div><span>Age</span><b>0 days</b></div>
+    <div><span>Link</span><b><a href="https://github.com/sorrynofocus/fake-test/blob/9588decc69c294108709c660e4f3971aef2945af/app.env#L11" target="_blank" rel="noopener noreferrer">Open</a></b></div>
+    <div class="wide"><span>Redacted</span><code>https://hooks.slack.com/services/T8K4P2M91/B7Q6N3R5V/Dd8f...UvX</code></div>
+  </li></ul>
+    </div>
+  </details>
+    </div>
+  </details><details class="owner-group" open>
+    <summary><b>@sorrynofocus/security-testing</b><span>5 findings across 1 repository</span></summary>
+    <div class="group-body">
+      <div class="subhead">Detectors</div>
+      <div class="chips"><span class="chip" title="HashiCorp Vault token">HashiCorp Vault token <b>3</b></span><span class="chip" title="AWS">AWS <b>1</b></span><span class="chip" title="Github">Github <b>1</b></span></div>
+      <details class="repo-block">
+    <summary><b>sorrynofocus/fake-test</b><span>5 findings</span></summary>
+    <div class="repo-body">
+      <div class="meta-line"><b>Owner:</b> Team: @sorrynofocus/security-testing</div>
+      <div class="subhead">Detectors</div>
+      <div class="chips"><span class="chip" title="HashiCorp Vault token">HashiCorp Vault token <b>3</b></span><span class="chip" title="AWS">AWS <b>1</b></span><span class="chip" title="Github">Github <b>1</b></span></div>
+      <div class="subhead">Sample findings</div>
+      <ul class="finding-list"><li class="finding-row">
+    <div><span>Detector</span><b>HashiCorp Vault token</b></div>
+    <div><span>Verified</span><b>No</b></div>
+    <div><span>Path</span><b>src/fakeSecrets.js</b></div>
+    <div><span>Blame</span><b>SorryNoFocus &lt;thechriswinters@gmail.com&gt;</b></div>
+    <div><span>Age</span><b>0 days</b></div>
+    <div><span>Link</span><b><a href="https://github.com/sorrynofocus/fake-test/blob/edc399cd1373f07eafd81ee63785a361628c0b3d/src/fakeSecrets.js#L5" target="_blank" rel="noopener noreferrer">Open</a></b></div>
+    <div class="wide"><span>Redacted</span><code>hvs.FAKE...DEF</code></div>
+  </li><li class="finding-row">
+    <div><span>Detector</span><b>HashiCorp Vault token</b></div>
+    <div><span>Verified</span><b>No</b></div>
+    <div><span>Path</span><b>config/settings.json</b></div>
+    <div><span>Blame</span><b>SorryNoFocus &lt;thechriswinters@gmail.com&gt;</b></div>
+    <div><span>Age</span><b>0 days</b></div>
+    <div><span>Link</span><b><a href="https://github.com/sorrynofocus/fake-test/blob/edc399cd1373f07eafd81ee63785a361628c0b3d/config/settings.json#L4" target="_blank" rel="noopener noreferrer">Open</a></b></div>
+    <div class="wide"><span>Redacted</span><code>hvs.FAKE...DEF</code></div>
+  </li><li class="finding-row">
+    <div><span>Detector</span><b>HashiCorp Vault token</b></div>
+    <div><span>Verified</span><b>No</b></div>
+    <div><span>Path</span><b>config/settings.json</b></div>
+    <div><span>Blame</span><b>SorryNoFocus &lt;thechriswinters@gmail.com&gt;</b></div>
+    <div><span>Age</span><b>0 days</b></div>
+    <div><span>Link</span><b><a href="https://github.com/sorrynofocus/fake-test/blob/edc399cd1373f07eafd81ee63785a361628c0b3d/config/settings.json#L5" target="_blank" rel="noopener noreferrer">Open</a></b></div>
+    <div class="wide"><span>Redacted</span><code>hvb.FAKE...DEF</code></div>
+  </li><li class="finding-row">
+    <div><span>Detector</span><b>AWS</b></div>
+    <div><span>Verified</span><b>No</b></div>
+    <div><span>Path</span><b>src/fakeSecrets.js</b></div>
+    <div><span>Blame</span><b>SorryNoFocus &lt;thechriswinters@gmail.com&gt;</b></div>
+    <div><span>Age</span><b>0 days</b></div>
+    <div><span>Link</span><b><a href="https://github.com/sorrynofocus/fake-test/blob/9588decc69c294108709c660e4f3971aef2945af/src/fakeSecrets.js#L8" target="_blank" rel="noopener noreferrer">Open</a></b></div>
+    <div class="wide"><span>Redacted</span><code>AKIA8ZQ4X7R2M9P5T3LB</code></div>
+  </li><li class="finding-row">
+    <div><span>Detector</span><b>Github</b></div>
+    <div><span>Verified</span><b>No</b></div>
+    <div><span>Path</span><b>config/settings.json</b></div>
+    <div><span>Blame</span><b>SorryNoFocus &lt;thechriswinters@gmail.com&gt;</b></div>
+    <div><span>Age</span><b>0 days</b></div>
+    <div><span>Link</span><b><a href="https://github.com/sorrynofocus/fake-test/blob/9588decc69c294108709c660e4f3971aef2945af/config/settings.json#L8" target="_blank" rel="noopener noreferrer">Open</a></b></div>
+    <div class="wide"><span>Redacted</span><code>ghp_M7q2...2sV</code></div>
+  </li></ul>
+    </div>
+  </details>
+    </div>
+  </details><details class="owner-group" open>
+    <summary><b>Jotter</b><span>7 findings across 1 repository</span></summary>
+    <div class="group-body">
+      <div class="subhead">Detectors</div>
+      <div class="chips"><span class="chip" title="URI">URI <b>7</b></span></div>
+      <details class="repo-block">
+    <summary><b>sorrynofocus/Jotter</b><span>7 findings</span></summary>
+    <div class="repo-body">
+      <div class="meta-line"><b>Owner:</b> Team: Jotter | Manager: Chris Winters | Fallback reason: no-codeowners</div>
+      <div class="subhead">Detectors</div>
+      <div class="chips"><span class="chip" title="URI">URI <b>7</b></span></div>
+      <div class="subhead">Sample findings</div>
+      <ul class="finding-list"><li class="finding-row">
+    <div><span>Detector</span><b>URI</b></div>
+    <div><span>Verified</span><b>No</b></div>
+    <div><span>Path</span><b>.circleci/config.yml</b></div>
+    <div><span>Blame</span><b>SorryNoFocus &lt;thechriswinters@gmail.com&gt;</b></div>
+    <div><span>Age</span><b>131 days</b></div>
+    <div><span>Link</span><b><a href="https://github.com/sorrynofocus/Jotter/blob/f7161eb7491229c8662cc3f0c045b37d48115df1/.circleci/config.yml#L45" target="_blank" rel="noopener noreferrer">Open</a></b></div>
+    <div class="wide"><span>Redacted</span><code>https://$env:********@github.com/sorrynofocus/Jotter</code></div>
+  </li><li class="finding-row">
+    <div><span>Detector</span><b>URI</b></div>
+    <div><span>Verified</span><b>No</b></div>
+    <div><span>Path</span><b>.circleci/config.yml</b></div>
+    <div><span>Blame</span><b>SorryNoFocus &lt;thechriswinters@gmail.com&gt;</b></div>
+    <div><span>Age</span><b>569 days</b></div>
+    <div><span>Link</span><b><a href="https://github.com/sorrynofocus/Jotter/blob/3dc22a0baa838d482b693372d4478112ecc756d5/.circleci/config.yml#L184" target="_blank" rel="noopener noreferrer">Open</a></b></div>
+    <div class="wide"><span>Redacted</span><code>https://$env:********@github.com/sorrynofocus/Jotter</code></div>
+  </li><li class="finding-row">
+    <div><span>Detector</span><b>URI</b></div>
+    <div><span>Verified</span><b>No</b></div>
+    <div><span>Path</span><b>.circleci/config.yml</b></div>
+    <div><span>Blame</span><b>Chris Winters &lt;thechriswinters@gmail.com&gt;</b></div>
+    <div><span>Age</span><b>569 days</b></div>
+    <div><span>Link</span><b><a href="https://github.com/sorrynofocus/Jotter/blob/93e294acab363a2387334b7cc6ec77f267883a50/.circleci/config.yml#L184" target="_blank" rel="noopener noreferrer">Open</a></b></div>
+    <div class="wide"><span>Redacted</span><code>https://$env:********@github.com/sorrynofocus/Jotter</code></div>
+  </li><li class="finding-row">
+    <div><span>Detector</span><b>URI</b></div>
+    <div><span>Verified</span><b>No</b></div>
+    <div><span>Path</span><b>.circleci/config.yml</b></div>
+    <div><span>Blame</span><b>SorryNoFocus &lt;thechriswinters@gmail.com&gt;</b></div>
+    <div><span>Age</span><b>131 days</b></div>
+    <div><span>Link</span><b><a href="https://github.com/sorrynofocus/Jotter/blob/1912f22d5d78a7a6808810f529d325d0b3a76e8d/.circleci/config.yml#L53" target="_blank" rel="noopener noreferrer">Open</a></b></div>
+    <div class="wide"><span>Redacted</span><code>https://$env:********@github.com/sorrynofocus/Jotter</code></div>
+  </li><li class="finding-row">
+    <div><span>Detector</span><b>URI</b></div>
+    <div><span>Verified</span><b>No</b></div>
+    <div><span>Path</span><b>.circleci/config.yml</b></div>
+    <div><span>Blame</span><b>SorryNoFocus &lt;thechriswinters@gmail.com&gt;</b></div>
+    <div><span>Age</span><b>606 days</b></div>
+    <div><span>Link</span><b><a href="https://github.com/sorrynofocus/Jotter/blob/df8ecbd4c5fb9637e9914edfd4d55e74f9b4bba0/.circleci/config.yml#L101" target="_blank" rel="noopener noreferrer">Open</a></b></div>
+    <div class="wide"><span>Redacted</span><code>https://$env:********@github.com/sorrynofocus/Jotter</code></div>
+  </li><li class="finding-row">
+    <div><span>Detector</span><b>URI</b></div>
+    <div><span>Verified</span><b>No</b></div>
+    <div><span>Path</span><b>.circleci/config.yml</b></div>
+    <div><span>Blame</span><b>SorryNoFocus &lt;thechriswinters@gmail.com&gt;</b></div>
+    <div><span>Age</span><b>131 days</b></div>
+    <div><span>Link</span><b><a href="https://github.com/sorrynofocus/Jotter/blob/f7161eb7491229c8662cc3f0c045b37d48115df1/.circleci/config.yml#L231" target="_blank" rel="noopener noreferrer">Open</a></b></div>
+    <div class="wide"><span>Redacted</span><code>https://$env:********@github.com/sorrynofocus/Jotter</code></div>
+  </li><li class="finding-row">
+    <div><span>Detector</span><b>URI</b></div>
+    <div><span>Verified</span><b>No</b></div>
+    <div><span>Path</span><b>.circleci/config.yml</b></div>
+    <div><span>Blame</span><b>Chris Winters &lt;thechriswinters@gmail.com&gt;</b></div>
+    <div><span>Age</span><b>606 days</b></div>
+    <div><span>Link</span><b><a href="https://github.com/sorrynofocus/Jotter/blob/2c4b724f448febfc414d330363b6300b6f91f393/.circleci/config.yml#L101" target="_blank" rel="noopener noreferrer">Open</a></b></div>
+    <div class="wide"><span>Redacted</span><code>https://$env:********@github.com/sorrynofocus/Jotter</code></div>
+  </li></ul>
+    </div>
+  </details>
+    </div>
+  </details>
+    </section>
+  </main>
+</body>
+</html>
