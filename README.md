@@ -101,8 +101,7 @@ FAKE-TEST/
 | Repository scan limit (`repository_scan_limit`) | `50000` | Only used for org scans. Limits how many repositories are listed and scanned. |
 | Report rows per repository (`report_max_rows_per_repository`) | `300` | Limits how many sample finding rows appear for each repository in the HTML report. |
 | Upload report artifact (`upload_artifact`) | `true` | Uploads `reports/index.html`, raw NDJSON, summaries, and scan metadata as a private Actions artifact. |
-| Commit report files (`commit_report_to_repo`) | `false` | Commits dated report files to `docs/scans`. Keep off while testing. |
-| Generate Pages report files (`publish_pages_report`) | `false` | Writes GitHub Pages-ready report files. Keep off unless Pages exposure is intended. |
+| Publish Pages report (`publish_pages_report`) | `false` | Writes GitHub Pages-ready report files, commits them under `docs/scans`, and regenerates the newest-to-oldest report index. Keep off unless Pages exposure is intended. |
 | Artifact retention (`artifact_retention_days`) | `7` | Controls how many days GitHub keeps uploaded workflow artifacts. |
 
 ### Scan Profiles
@@ -130,9 +129,7 @@ Single repository test:
 | Repository visibility (`repository_visibility`) | `private` |
 | Scan profile (`scan_profile`) | `strict` |
 | Upload report artifact (`upload_artifact`) | `true` |
-| Commit report files (`commit_report_to_repo`) | `false` |
-| Generate Pages report files (`publish_pages_report`) | `false` |
-
+| Publish Pages report (`publish_pages_report`) | `false` |
 Fake-secret test repository:
 
 | Parameter | Value |
@@ -141,9 +138,7 @@ Fake-secret test repository:
 | Scan target (`scan_target`) | `sorrynofocus/fake-test` |
 | Scan profile (`scan_profile`) | `verbose` |
 | Upload report artifact (`upload_artifact`) | `true` |
-| Commit report files (`commit_report_to_repo`) | `false` |
-| Generate Pages report files (`publish_pages_report`) | `false` |
-
+| Publish Pages report (`publish_pages_report`) | `false` |
 Owner/org scan:
 
 | Parameter | Value |
@@ -152,11 +147,9 @@ Owner/org scan:
 | Scan target (`scan_target`) | `sorrynofocus` |
 | Repository visibility (`repository_visibility`) | `all` |
 | Repository scan limit (`repository_scan_limit`) | `50` |
-| Scan profile (`scan_profile`) | `strict` |
+| Scan profile (`scan_profile`) | `real` or `verbose` |
 | Upload report artifact (`upload_artifact`) | `true` |
-| Commit report files (`commit_report_to_repo`) | `false` |
-| Generate Pages report files (`publish_pages_report`) | `false` |
-
+| Publish Pages report (`publish_pages_report`) | `false` |
 ### Report UI
 
 The final HTML report can be viewed by _downloading the workflow artifact and opening `reports/index.html`_ or automatically published to Github Pages.
@@ -193,10 +186,9 @@ _Note_: Typical Github pages cannot be _private_ unless you upgrade Github or en
     1. Enable GitHub Pages from `Settings` -> `Pages`.
     2. Use `Deploy from a branch`.
     3. Select the default branch and `/docs`.
-    4. Run the workflow with:
+    4. Run the workflow with Pages report publishing enabled. This writes and commits the generated report files:
 
     ```text
-    commit_report_to_repo: true
     publish_pages_report: true
     ```
 

@@ -46,13 +46,8 @@ on:
         type: boolean
         required: true
         default: true
-      commit_report_to_repo:
-        description: "Commit dated HTML reports to docs/scans"
-        type: boolean
-        required: true
-        default: false
       publish_pages_report:
-        description: "Generate GitHub Pages-ready report files"
+        description: "Generate GitHub Pages-ready report files and commit them to docs/scans"
         type: boolean
         required: true
         default: false
@@ -76,7 +71,7 @@ env:
   REPORT_MAX_ROWS_PER_REPOSITORY: ${{ inputs.report_max_rows_per_repository || '300' }}
   REPORT_THEME_DEFAULT: "light"
   REPORT_DEBUG: "0"
-  REPORT_PUBLISH_PAGES: ${{ inputs.commit_report_to_repo || inputs.publish_pages_report || false }}
+  REPORT_PUBLISH_PAGES: ${{ inputs.publish_pages_report || false }}
   SCAN_GITHUB_TOKEN: ${{ secrets.TRUFFLEHOG_SCAN_TOKEN || secrets.GH_DISPATCH_PAT || github.token }}
 
 jobs:
@@ -252,8 +247,8 @@ jobs:
           TRUFFLEHOG_SCAN_PROFILE: ${{ env.TRUFFLEHOG_SCAN_PROFILE }}
           RUN_ID: ${{ github.run_id }}
 
-      - name: Commit dated reports
-        if: ${{ success() && inputs.commit_report_to_repo }}
+      - name: Commit Pages reports
+        if: ${{ success() && inputs.publish_pages_report }}
         run: |
           set -euo pipefail
           git config user.name "github-actions[bot]"
